@@ -303,8 +303,7 @@ class Post_View_Counter
 
         echo '<div class="wrap">';
         echo '<h1>Post View Counter Settings</h1>';
-
-        echo " </div>";
+        echo '</div>';
 
     }
 

@@ -38,8 +38,7 @@ require_once __DIR__ . '/inc/class-post-view-counter.php';
  *
  * @since 1.0.0
  */
-function Post_View_Counter()
-{
+function Post_View_Counter() {
  return new Post_View_Counter(__FILE__, '1.0.1' );
 }
 Post_View_Counter();

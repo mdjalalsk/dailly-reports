@@ -18,5 +18,5 @@
 //do while loop : first intial value ,do block->print/echo,increment/decriment,do block ses and logical conditaions
 
 for($i = 0; $i < 10; $i++){
-    echo $i."\ns";
+    echo $i."\n";
 }
