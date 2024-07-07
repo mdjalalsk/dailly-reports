@@ -92,6 +92,9 @@ class Wp_Mata_Box
         add_action('plugins_loaded', array($this, 'load_textdomain'));
         add_action('admin_menu', array($this, 'add_meta_field'));
         add_action('save_post', array($this, 'mtb_save_field'));
+        add_action('save_post', array($this, 'mtb_image_save_field'));
+        add_action('save_post', array($this, 'mtb_gellery_save_field'));
+        add_action('admin_enqueue_scripts', array($this, 'admin_enqueue_assets'));
     }
 
     /**
@@ -106,6 +109,17 @@ class Wp_Mata_Box
         load_plugin_textdomain('metabox', false, dirname(plugin_basename($this->file)) . '/languages/');
 
     }
+    /**
+     * Add assets for admin sections
+     *
+     * @return void
+     * @since 1.0.0
+     */
+    public function admin_enqueue_assets(){
+      wp_enqueue_style('mtb_style', plugin_dir_url($this->file) . 'assets/admin/css/style.css');
+      wp_enqueue_script('mtb_script', plugin_dir_url($this->file) . 'assets/admin/js/main.js', array('jquery'),'1.0.0', true);
+
+    }
 
     /**
      * Initialize Meta Field.
@@ -115,7 +129,19 @@ class Wp_Mata_Box
      */
     public function add_meta_field()
     {
-        add_meta_box('mtb_post_location', __('Locations Info', 'meta-box'), array($this, 'mtb_display_metabox'), 'post',);
+        add_meta_box('mtb_post_location',
+            __('Locations Info', 'meta-box'),
+            array($this, 'mtb_display_metabox'),
+            'post');
+
+        add_meta_box('mtb_images_metabox',
+        __('Images Info', 'meta-box'),
+        array($this, 'mtb_display_images_metabox'),
+        'post');
+        add_meta_box('mtb_gellery_metabox',
+            __('Images Gellery', 'meta-box'),
+            array($this, 'mtb_display_gellery_metabox'),
+            'post');
     }
 
     /**
@@ -197,9 +223,49 @@ EOD;
            {$dropdown_html}
             </select>
            EOD;
-
         echo $metaBox_html;
     }
+
+    public function mtb_display_images_metabox($post){
+        wp_nonce_field('mtb_post_image_nonce_action', 'mtb_post_image_nonce');
+        $image_id= esc_attr(get_post_meta($post->ID, 'mtb_post_image_id', true));
+        $image_url= esc_attr(get_post_meta($post->ID, 'mtb_post_image_url', true));
+
+        $imgage_html=<<<EOD
+       <div>
+       <label>Images</label>
+        <button type="button" id="mtb_upload_img" class="button">Upload Image</button>
+        <input type="hidden" id="mtb-image-id" name="mtb_image_id" value="{$image_id}" />
+        <input type="hidden" id="mtb_img_url" name="mtb_img_url" value="{$image_url}" />
+        <div id="mtb_images_container" style="width: 100%; height:auto;" ></div>
+        
+      </div>
+    </div>
+    EOD;
+
+        echo $imgage_html;
+    }
+
+    public function mtb_display_gellery_metabox($post){
+        wp_nonce_field('mtb_post_gellery_nonce_action', 'mtb_post_gellery_nonce');
+        $images_id= esc_attr(get_post_meta($post->ID, 'mtb_post_gellery_ids', true));
+        $images_url= esc_attr(get_post_meta($post->ID, 'mtb_post_gellery_urls', true));
+
+        $imgage_html=<<<EOD
+       <div>
+       <label>Images</label>
+        <button type="button" id="mtb_upload_gellery" class="button">Gellery</button>
+        <input type="hidden" id="mtb_images_id" name="mtb_images_id" value="{$images_id}" />
+        <input type="hidden" id="mtb_imgs_url" name="mtb_imgs_url" value="{$images_url}" />
+        <div id="mtb_gellery_container" style="width: 100%; height:auto;" ></div>
+        
+      </div>
+    </div>
+    EOD;
+
+        echo $imgage_html;
+    }
+
 
     /**
      * secured nonce field
@@ -227,6 +293,23 @@ EOD;
         }
         return true;
     }
+    /**
+     * Save meta locations filed.
+     *
+     * @return void
+     * @since 1.0.0
+     */
+    public function mtb_gellery_save_field($post_id)
+    {
+        if (!$this->is_secured('mtb_post_gellery_nonce', 'mtb_post_gellery_nonce_action', $post_id)) {
+            return $post_id;
+        }
+
+        $images_id=isset($_POST['mtb_images_id']) ? absint($_POST['mtb_images_id']) : '';
+        $images_url=isset($_POST['mtb_imgs_url']) ? esc_url($_POST['mtb_imgs_url']) : '';
+        update_post_meta($post_id, 'mtb_post_gellery_ids', $images_id);
+        update_post_meta($post_id, 'mtb_post_gellery_urls', $images_url);
+    }
 
     /**
      * Save meta locations filed.
@@ -234,6 +317,25 @@ EOD;
      * @return void
      * @since 1.0.0
      */
+    public function mtb_image_save_field($post_id)
+    {
+        if (!$this->is_secured('mtb_post_image_nonce', 'mtb_post_image_nonce_action', $post_id)) {
+            return $post_id;
+        }
+
+        $image_id=isset($_POST['mtb_image_id']) ? absint($_POST['mtb_image_id']) : '';
+        $image_url=isset($_POST['mtb_img_url']) ? esc_url($_POST['mtb_img_url']) : '';
+        update_post_meta($post_id, 'mtb_post_image_id', $image_id);
+        update_post_meta($post_id, 'mtb_post_image_url', $image_url);
+    }
+
+    /**
+     * Save meta locations filed.
+     *
+     * @return void
+     * @since 1.0.0
+     */
+
     public function mtb_save_field($post_id)
     {
         if (!$this->is_secured('mtb_post_location_nonce', 'mtb_post_location_nonce_action', $post_id)) {
@@ -258,5 +360,6 @@ EOD;
         update_post_meta($post_id, 'mtb_radio_color', $radio);
         update_post_meta($post_id, 'mtb_dropdown_color', $dropdown_color);
     }
+
 
 }
