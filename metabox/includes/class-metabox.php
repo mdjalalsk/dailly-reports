@@ -95,6 +95,23 @@ class Wp_Mata_Box
         add_action('save_post', array($this, 'mtb_image_save_field'));
         add_action('save_post', array($this, 'mtb_gellery_save_field'));
         add_action('admin_enqueue_scripts', array($this, 'admin_enqueue_assets'));
+        //user profile contact info
+        add_filter('user_contactmethods', array($this, 'user_contact_method_render'));
+        // Category texonomy
+        add_action('init', array($this, 'mtb_texonomy_render'));
+        //Category
+        add_action('category_add_form_fields', array($this, 'mtb_category_add_form_fields'));
+        add_action('category_edit_form_fields', array($this, 'mtb_category_edit_form_fields'));
+        add_action('create_category', array($this, 'mtb_category_meta_save'));
+        add_action('edit_category', array($this, 'mtb_category_update_meta_save'));
+        //Tags
+        add_action('post_tag_add_form_fields', array($this, 'mtb_category_add_form_fields'));
+        add_action('post_tag_edit_form_fields', array($this, 'mtb_category_edit_form_fields'));
+        add_action('create_post_tag', array($this, 'mtb_category_meta_save'));
+        add_action('edit_post_tag', array($this, 'mtb_category_update_meta_save'));
+        // select post meta
+        add_action('save_post', array($this, 'mtb_display_select_metabox_save'));
+
     }
 
     /**
@@ -142,6 +159,12 @@ class Wp_Mata_Box
             __('Images Gellery', 'meta-box'),
             array($this, 'mtb_display_gellery_metabox'),
             'post');
+        add_meta_box(
+            'mtb_selected_posts',
+            __('Select Posts', 'meta-box'),
+            array($this, 'mtb_display_select_metabox'),
+            'page'
+        );
     }
 
     /**
@@ -360,6 +383,158 @@ EOD;
         update_post_meta($post_id, 'mtb_radio_color', $radio);
         update_post_meta($post_id, 'mtb_dropdown_color', $dropdown_color);
     }
+    /**
+     * User Contact information
+     *
+     * @param array $methods
+     *
+     * @return array
+     */
+    public function user_contact_method_render($methods)
+    {
+        $methods['facebook'] = __( 'Facebook','meta-box' );
+        $methods['twitter']  = __( 'Twitter','meta-box' );
+        $methods['linkedin'] = __( 'Linkdin','meta-box' );
+        $methods['skype']    = __( 'Skype','meta-box' );
 
+        return $methods;
+    }
+    /**
+     * Texonomy field
+     *
+     *
+     * @return void
+     */
+
+    public function mtb_texonomy_render()
+    {
+      $argument=array(
+          'type'=>'string',
+          'sanitize_callback'=>'sanitize_text_field',
+          'single'=>true,
+          'descriptions'=>'Simple category meta filed for texonomy',
+          'show_in_rest'=>true,
+      );
+      register_meta('term', 'mtb_tax_extra_info', $argument);
+    }
+    /**
+     * Texonomy field
+     *
+     * @return void
+     */
+    public function mtb_category_add_form_fields()
+    {
+
+        ?>
+        <div class="form-field form-required term-name-wrap">
+            <label for="tag-name"><?php _e('Extra Info','meta-box') ?></label>
+            <input name="extra_info" id="extra_info" type="text" value="" size="40" aria-required="true" aria-describedby="name-description">
+            <p>The Extra info is how it appears on your site.</p>
+        </div>
+        <?php
+    }
+    /**
+     * Texonomy field
+     *
+     * @return void
+     */
+    public function mtb_category_edit_form_fields($term)
+    {
+        $extra_info = get_term_meta( $term->term_id, 'mtb_tax_extra_info', true )
+
+
+        ?>
+        <tr class="form-field form-required term-name-wrap">
+            <th scope="row"><label for="tag-name"><?php _e('Extra Info','meta-box') ?></label>  </th>
+            <td>
+                <input name="extra_info" id="extra_info" type="text" value="<?php echo esc_attr( $extra_info ); ?>" size="40" aria-required="true" aria-describedby="name-description">
+                <p>The Extra info is how it appears on your site.</p>
+            </td>
+        </tr>
+        <?php
+    }
+    /**
+     * Create category field
+     *
+     * @return void
+     */
+
+    public function mtb_category_meta_save($term_id)
+    {
+        if ( wp_verify_nonce( $_POST['_wpnonce_add-tag'], 'add-tag' ) ) {
+            $extra_info = sanitize_text_field( $_POST['extra_info'] );
+            update_term_meta( $term_id, 'mtb_tax_extra_info', $extra_info );
+        }
+    }
+    /**
+     * Update category field
+     *
+     * @return void
+     */
+
+    public function mtb_category_update_meta_save($term_id)
+    {
+
+
+        if ( wp_verify_nonce( $_POST['_wpnonce'], "update-tag_{$term_id}" ) ) {
+
+
+            $extra_info = sanitize_text_field( $_POST['extra_info'] );
+            update_term_meta( $term_id, 'mtb_tax_extra_info', $extra_info );
+        }
+    }
+
+    /**
+     * Display select meta
+     *
+     * @return void
+     */
+    public function mtb_display_select_metabox($post) {
+        $selected_post_id = get_post_meta($post->ID,'mtb_selected_posts',true);
+        wp_nonce_field( 'mtb_posts_action', 'mtb_post_nonce' );
+        $args = array(
+            'post_type'      => 'post',
+            'posts_per_page' => - 1
+        );
+        $dropdown_list = '';
+        $_posts        = new wp_query( $args );
+        $dropdown_list = '';
+        while ( $_posts->have_posts() ) {
+
+            $_posts->the_post();
+            $selected = in_array(get_the_ID(), (array) $selected_post_id) ? 'selected' : '';
+
+            $dropdown_list .= sprintf( "<option %s value='%s'>%s</option>", $selected, get_the_ID(), get_the_title() );
+        }
+        wp_reset_query();
+        $label = __('Select Posts', 'meta-box');
+        $metabox_html = <<<EOD
+        <div>
+            <label for="mtb_posts">{$label}</label>
+            <select multiple="multiple" name="mtb_posts[]" id="mtb_posts">
+                <option value="0">{$label}</option>
+                {$dropdown_list}
+            </select>
+        </div>
+        EOD;
+        echo $metabox_html;
+    }
+
+    /**
+     * Display select meta
+     *
+     * @return mixed
+     */
+   public function mtb_display_select_metabox_save( $post_id ) {
+        if ( !$this->is_secured( 'mtb_post_nonce', 'mtb_posts_action', $post_id ) ) {
+            return $post_id;
+        }
+
+        $selected_post_id = $_POST['mtb_posts'];
+        if ( $selected_post_id > 0 ) {
+            update_post_meta( $post_id, 'mtb_selected_posts', $selected_post_id );
+        }
+        return $post_id;
+    }
 
 }
