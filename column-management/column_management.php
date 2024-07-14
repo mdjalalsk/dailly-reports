@@ -94,5 +94,91 @@ function clm_sortable_column_orderby($query) {
 }
 add_action('pre_get_posts', 'clm_sortable_column_orderby');
 
+function clm_manage_post_filter_columns()
+{
+    if(isset($_GET['post_type']) && $_GET['post_type']!='post'){
+        return;
+    }
+
+    $filter_value=isset($_GET['demofilter'])?$_GET['demofilter']:'';
+    $values=array(
+            "0"=>'select',
+           "1"=>'some post',
+           "2"=>'some more post',
+         )
+
+    ?>
+    <select name="demofilter">
+        <?php
+        foreach ($values as $key => $value) {
+        printf("<option value='%s' %s>%s</option>",$key,$key==$filter_value?"selected='selected'":"",$value);
+        }
+        ?>
+    </select>
+<?php
+}
+
+add_action('restrict_manage_posts', 'clm_manage_post_filter_columns');
+function clm_manage_post_filter_columns_data($wp_query)
+{
+$filter_value=isset($_GET['demofilter'])?$_GET['demofilter']:'';
+if('1'==$filter_value){
+    $wp_query->set('post__in',array(1,97));
+}elseif('2'==$filter_value){
+    $wp_query->set('post__not_in',array(97,101));
+}
+
+}
+add_action('pre_get_posts', 'clm_manage_post_filter_columns_data');
+
+
+function clm_thumbnail_filter_columns()
+{
+    if(isset($_GET['post_type']) && $_GET['post_type']!='post'){
+        return;
+    }
+
+    $filter_value=isset($_GET['thumbnail_filter'])?$_GET['thumbnail_filter']:'';
+    $values=array(
+        "0"=>'select',
+        "1"=>'thumbnail',
+        "2"=>'no thumbnail',
+    )
+
+    ?>
+    <select name="thumbnail_filter">
+        <?php
+        foreach ($values as $key => $value) {
+            printf("<option value='%s' %s>%s</option>",$key,$key==$filter_value?"selected='selected'":"",$value);
+        }
+        ?>
+    </select>
+    <?php
+}
+
+add_action('restrict_manage_posts', 'clm_thumbnail_filter_columns');
+function clm_thumbnail_filter_columns_data($wp_query)
+{
+    $filter_value=isset($_GET['thumbnail_filter'])?$_GET['thumbnail_filter']:'';
+    $wp_query->set('post_per_page',5);
+    if('1'==$filter_value){
+        $wp_query->set('meta_query',array(
+                array(
+                    'key'=>'_thumbnail_id',
+                    'compare'=>'EXISTS'
+                )
+        ));
+    }elseif('2'==$filter_value){
+        $wp_query->set('meta_query',array(
+            array(
+                'key'=>'_thumbnail_id',
+                'compare'=>'NOT EXISTS'
+            )
+        ));
+    }
+
+}
+add_action('pre_get_posts', 'clm_thumbnail_filter_columns_data');
+
 
 
